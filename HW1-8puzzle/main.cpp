@@ -19,10 +19,11 @@ const int SUCCESS = -1;
 
 class Board{
 private:
-    vector<int> board;
     int n; // n = rows = columns;
-    int heuristic; // h() - Heuristic function
+    vector<int> board;
     int zeroPositionInGoalState;
+    int heuristic; // h() - Heuristic function
+    string parentMove; // "init" "left" "right" "up" "down" "goal"
 
     int getCurrentPositionOfZero() {
         for (int i=0; i < n*n; i++) {
@@ -50,13 +51,16 @@ private:
     }
 
 public:
-    Board(int lastNumber, vector<int> numbersInBoard, int zeroPositionInGoalState = -1, Board* parent = nullptr) { // TODO make it work with zeroPositionInGoalState !=0
+    Board(int lastNumber, vector<int> numbersInBoard, int zeroPositionInGoalState = -1, string parentMove = "init") { // TODO make it work with zeroPositionInGoalState !=0
         n = (int) sqrt(lastNumber + 1);
         board = std::move(numbersInBoard);
         if (zeroPositionInGoalState == -1)
             zeroPositionInGoalState = lastNumber;
         this->zeroPositionInGoalState = zeroPositionInGoalState;
         heuristic = calculateHeuristic();
+        this->parentMove = std::move(parentMove);
+        //if (isGoalState())
+        //    this->parentMove = "goal";
     }
 
     string showBoard() {
@@ -72,7 +76,7 @@ public:
 
     bool isSolvable() {return true;}; // TODO
 
-    vector<int> getBoard() {
+    vector<int> getBoard() const {
         return board;
     }
 
@@ -80,14 +84,13 @@ public:
         return heuristic;
     }
 
+    string getParentMove() const {
+        return parentMove;
+    }
+
     bool operator < (Board& otherBoard) const {
         return heuristic < otherBoard.getHeuristic();
     }
-
-//    bool areBoardsEqual(Board& otherBoard) {
-//        return board == otherBoard.getBoard() and
-//               heuristic == otherBoard.getHeuristic();
-//    }
 
     bool isGoalState() const {
         return heuristic == 0;
@@ -98,38 +101,41 @@ public:
        int positionOfZero = getCurrentPositionOfZero();
 
        // left
-        if (positionOfZero % n != 0){
+        if (positionOfZero % n != 0 and parentMove!="right"){
             vector<int> neighbourBoard = board;
             swap(neighbourBoard[positionOfZero], neighbourBoard[positionOfZero - 1]);
-            Board neighbour(n*n - 1, neighbourBoard);
+            string move = "left";
+            Board neighbour(n*n - 1, neighbourBoard, zeroPositionInGoalState, move);
             neighbours.push_back(neighbour);
         }
 
         // right
-        if (positionOfZero % n != 2){
+        if (positionOfZero % n != 2 and parentMove!="left"){
             vector<int> neighbourBoard = board;
             swap(neighbourBoard[positionOfZero], neighbourBoard[positionOfZero + 1]);
-            Board neighbour(n*n - 1, neighbourBoard);
+            string move = "right";
+            Board neighbour(n*n - 1, neighbourBoard, zeroPositionInGoalState, move);
             neighbours.push_back(neighbour);
         }
 
         // up
-        if (positionOfZero / n != 0){
+        if (positionOfZero / n != 0 and parentMove!="down"){
             vector<int> neighbourBoard = board;
             swap(neighbourBoard[positionOfZero], neighbourBoard[positionOfZero - n]);
-            Board neighbour(n*n - 1, neighbourBoard);
+            string move = "up";
+            Board neighbour(n*n - 1, neighbourBoard, zeroPositionInGoalState, move);
             neighbours.push_back(neighbour);
         }
 
         // down
-        if (positionOfZero / n != 2){
+        if (positionOfZero / n != 2 and parentMove!="up"){
             vector<int> neighbourBoard = board;
             swap(neighbourBoard[positionOfZero], neighbourBoard[positionOfZero + n]);
-            Board neighbour(n*n - 1, neighbourBoard);
+            string move = "down";
+            Board neighbour(n*n - 1, neighbourBoard, zeroPositionInGoalState, move);
             neighbours.push_back(neighbour);
         }
 
-        //sort(neighbours.begin(), neighbours.end());
         return neighbours;
     }
 };
@@ -139,9 +145,13 @@ class Puzzle{
 private:
     Board createInitialBoard() {
         int N = 8;
-        vector<int> numbers {1, 3, 5, 4, 2, 6, 7, 8, 0}; // 6
-        //vector<int> numbers {6, 5, 3, 2, 4, 8, 7, 0, 1}; // 21
-        //vector<int> numbers {1, 2, 3, 4, 5, 6, 7, 8, 0}; // 0
+        // 6: up, up, left, down, right, down
+        //vector<int> numbers {1, 3, 5, 4, 2, 6, 7, 8, 0};
+
+        // 21:   right, up, up, left, left, down, right, up, right, down,
+        // left, down, left, up,  right, up, left, down, down, right, right
+        vector<int> numbers {6, 5, 3, 2, 4, 8, 7, 0, 1};
+
         Board initialBoard = Board(N, numbers);
         return initialBoard;
     }
@@ -176,11 +186,20 @@ public:
         int threshold = initialBoard.getHeuristic();
 
         while(true) {
-            int lengthOfOptimalPath = 0; // TODO rename
+            // cout << "Threshold: " << threshold << endl;
+            int lengthOfOptimalPath = 0;
             int g = 0; // Number of nodes traversed from a start node to get to the current node
-            int result = search(initialBoard, g, threshold, lengthOfOptimalPath);
+            vector<string> path;
+            int result = search(initialBoard, g, threshold, lengthOfOptimalPath, path);
             if (result == SUCCESS) {
+                cout << "<------------------------->" << endl;
                 cout << "Length of Optimal Path: " << lengthOfOptimalPath << endl;
+                cout << "<------------------------->" << endl;
+                cout << "           Path:           " << endl;
+                cout << "<------------------------->" << endl;
+                for (auto & move : path) {
+                    cout << "           " << move << endl;
+                }
                 break;
             }
             threshold = result;
@@ -188,15 +207,21 @@ public:
     }
 
     // Returns:
-    // SUCCESS,                        when an optimal path to the goal is found
-    // min{f1,f2,..} = next-threshold, where fi: fi > current-threshold;
-    int search(Board board, int g, int threshold, int& lengthOfOptimalPath) {
+    // SUCCESS,                         when an optimal path to the goal is found
+    // min{f1,f2,..} = next-threshold,  where fi: fi > current-threshold;
+    int search(Board board, int g, int threshold, int& lengthOfOptimalPath, vector<string>& path) {
         int f = g + board.getHeuristic();
-        // cout << board.showBoard() << endl;
+        if (board.getParentMove() != "init")
+            path.push_back(board.getParentMove());
+
+        //cout << "h: " << board.getHeuristic() << " g: " << g << " f: " << f << endl;
+        //cout << board.getParentMove() << endl;
+        //cout << board.showBoard() << endl;
+        //cout << endl;
 
         if (board.isGoalState()) {
             lengthOfOptimalPath = g;
-            return -1;
+            return SUCCESS;
         }
 
         if (f > threshold) {
@@ -207,13 +232,14 @@ public:
         vector<Board> neighbours = board.getNeighbours();
 
         for (auto & neighbour : neighbours) {
-            int result = search(neighbour, g+1, threshold, lengthOfOptimalPath);
+            int result = search(neighbour, g+1, threshold, lengthOfOptimalPath, path);
             if (result == SUCCESS) {
                 return SUCCESS;
             }
             if (result < min) {
                 min = result;
             }
+            path.pop_back(); // Unsuccessful path, go back
         }
 
         return min;
