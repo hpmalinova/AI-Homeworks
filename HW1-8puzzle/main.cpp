@@ -43,23 +43,29 @@ private:
 
     // Where heuristic function is:
     // Summation of the Manhattan distance between misplaced nodes
-    int calculateHeuristic() { // TODO when zero_position != - 1
+    int calculateHeuristic() {
         int manhattan = 0;
 
-        for (int i=0; i<n*n; i++) {
-            if (board[i] != i + 1) {
-                // |currentRow - goalRow| + |currentColumn - goalColumn|
-                if (board[i] != 0)
-                    manhattan += abs(i / 3 - ((board[i] - 1) / 3)) + abs(i % 3 - ((board[i] - 1) % 3));
-                else // TODO
-                    manhattan += abs(i / 3 - ((n*n - 1) / 3)) + abs(i % 3 - ((n*n - 1) % 3));
-            }
+        // Calculate goal state:
+        // goal[i] = v, v: index of i in the goal state
+
+        int goal[n*n];
+        goal[0] = zeroPositionInGoalState;
+        for (int i = 1; i <= zeroPositionInGoalState; i++)
+            goal[i] = i - 1;
+        for (int i = zeroPositionInGoalState + 1; i < n*n; i++)
+            goal[i] = i;
+
+        // Calculate Manhattan distance:
+        for (int i=0; i < n*n; i++) {
+            // |currentRow - goalRow| + |currentColumn - goalColumn||
+            manhattan += abs(i / n - goal[board[i]] / n) + abs(i % n - goal[board[i]] % n);
         }
         return manhattan;
     }
 
 public:
-    Board(int lastNumber, vector<int> numbersInBoard, int zeroPositionInGoalState = 8, string parentMove = "init") { // TODO make it work with zeroPositionInGoalState !=0
+    Board(int lastNumber, vector<int> numbersInBoard, int zeroPositionInGoalState = 8, string parentMove = "init") {
         n = (int) sqrt(lastNumber + 1);
 
         board = std::move(numbersInBoard);
@@ -162,13 +168,20 @@ private:
     static Board createInitialBoard() {
         int N = 8;
         // 6: up, up, left, down, right, down
-        // vector<int> numbers {1, 3, 5, 4, 2, 6, 7, 8, 0};
+        //vector<int> numbers {1, 3, 5, 4, 2, 6, 7, 8, 0};
 
         // 21:   right, up, up, left, left, down, right, up, right, down,
         // left, down, left, up,  right, up, left, down, down, right, right
-        vector<int> numbers {6, 5, 3, 2, 4, 8, 7, 0, 1};
+         vector<int> numbers {6, 5, 3, 2, 4, 8, 7, 0, 1};
 
-        Board initialBoard = Board(N, numbers);
+        Board initialBoard = Board(N, numbers, N);
+
+        // 21: right, up, up, left, down, left, up, right, down, right,
+        // up, left,  down, down, left,  up, up, right, down, left, up
+        //vector<int> numbers {6, 5, 3, 2, 4, 8, 7, 0, 1};
+        // Board initialBoard = Board(N, numbers, 0);
+
+
         return initialBoard;
     }
 
@@ -206,6 +219,7 @@ public:
         int threshold = initialBoard.getHeuristic();
 
         while(true) {
+            //cout << "Here: " << threshold << std::endl;
             int lengthOfOptimalPath = 0;
             int g = 0; // Number of nodes traversed from a start node to get to the current node
             vector<string> path;
