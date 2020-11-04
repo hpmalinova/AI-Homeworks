@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <utility>
 #include <vector>
 #include <cmath>
 #include <algorithm>
@@ -13,38 +14,28 @@ using std::to_string;
 using std::swap;
 //using std::sort;
 
-/*
- * What is the last number? 8
- *       Calculate row=column=3
- * Make goal board in variable? // or operator =
- *
- */
+const int SUCCESS = -1;
+
 
 class Board{
 private:
-    vector<int> board; // int* board
-    int n; // rows = columns;
-    int manhattan; // h()
-    int zeroPosition;
+    vector<int> board;
+    int n; // n = rows = columns;
+    int heuristic; // h() - Heuristic function
+    int zeroPositionInGoalState;
 
-    void fillBoardWithNumbers(vector<int> numbers) {
-        //if (numbers.size() != n*n - 1) {
-        //    cout << "Incorrect number of ";
-        //}
-        for (int i = 0; i< n*n; i++) {
-            board[i] = numbers[i];
-        }
-    }
-
-    int getPositionOfZero() {
+    int getCurrentPositionOfZero() {
         for (int i=0; i < n*n; i++) {
             if (board[i] == 0)
                 return i;
         }
+        return -1; // Zero not found;
     }
 
-    void calculateManhattan() { // TODO when zero_position != - 1
-        manhattan = 0;
+    // Where heuristic function is:
+    // Summation of the Manhattan distance between misplaced nodes
+    int calculateHeuristic() { // TODO when zero_position != - 1
+        int manhattan = 0;
 
         for (int i=0; i<n*n; i++) {
             if (board[i] != i + 1) {
@@ -55,23 +46,24 @@ private:
                     manhattan += abs(i / 3 - ((n*n - 1) / 3)) + abs(i % 3 - ((n*n - 1) % 3));
             }
         }
+        return manhattan;
     }
 
 public:
-    Board(int lastNumber, vector<int> numbers, int zeroPosition = -1, Board* parent = NULL, int distanceFromStart=0) { // TODO make it work with zeroPosition !=0
-        n = sqrt(lastNumber + 1);
-        board = numbers;
-        //board = new int [n * n];
-        //fillBoardWithNumbers(numbers);
-        calculateManhattan();
-        this->zeroPosition = zeroPosition;
+    Board(int lastNumber, vector<int> numbersInBoard, int zeroPositionInGoalState = -1, Board* parent = nullptr) { // TODO make it work with zeroPositionInGoalState !=0
+        n = (int) sqrt(lastNumber + 1);
+        board = std::move(numbersInBoard);
+        if (zeroPositionInGoalState == -1)
+            zeroPositionInGoalState = lastNumber;
+        this->zeroPositionInGoalState = zeroPositionInGoalState;
+        heuristic = calculateHeuristic();
     }
 
     string showBoard() {
-        string str = "";
-        for (int i=0; i< n*n; i++) {
+        string str;
+        for (int i = 0; i < n * n; i++) {
             str.append(to_string(board[i]) + " ");
-            if (i % n == n-1) {
+            if (i % n == n - 1) {
                 str.append("\n");
             }
         }
@@ -80,43 +72,30 @@ public:
 
     bool isSolvable() {return true;}; // TODO
 
-//    int tileAt(int row, int column) {
-//        if (row >= n || column >= n) {
-//            return -1;
-//        }
-//        return board[row * n + column];
-//    }
-//
-//    int tileAt(int position) {
-//        if (position >= n*n) {
-//            return -1;
-//        }
-//        return board[position];
-//    }
     vector<int> getBoard() {
         return board;
     }
 
-    int getManhattan() {
-        return manhattan;
+    int getHeuristic() const {
+        return heuristic;
     }
 
-    bool operator < (Board& otherBoard) {
-        return manhattan < otherBoard.getManhattan();
+    bool operator < (Board& otherBoard) const {
+        return heuristic < otherBoard.getHeuristic();
     }
 
 //    bool areBoardsEqual(Board& otherBoard) {
 //        return board == otherBoard.getBoard() and
-//               manhattan == otherBoard.getManhattan();
+//               heuristic == otherBoard.getHeuristic();
 //    }
 
-    bool isGoalState() {
-        return manhattan == 0;
+    bool isGoalState() const {
+        return heuristic == 0;
     }
 
     vector<Board> getNeighbours() {
        vector<Board> neighbours;
-       int positionOfZero = getPositionOfZero();
+       int positionOfZero = getCurrentPositionOfZero();
 
        // left
         if (positionOfZero % n != 0){
@@ -155,57 +134,68 @@ public:
     }
 };
 
-class Puzzle{
 
+class Puzzle{
 private:
+    Board createInitialBoard() {
+        int N = 8;
+        vector<int> numbers {1, 3, 5, 4, 2, 6, 7, 8, 0}; // 6
+        //vector<int> numbers {6, 5, 3, 2, 4, 8, 7, 0, 1}; // 21
+        //vector<int> numbers {1, 2, 3, 4, 5, 6, 7, 8, 0}; // 0
+        Board initialBoard = Board(N, numbers);
+        return initialBoard;
+    }
+
+    Board createInitialBoardFromUser() {
+        int N;
+        cout << "Enter count of tiles (ex: 8, 15): " << endl;
+        cin >> N;
+
+        int zeroPositionInGoalState;
+        cout << "Enter position of zero in goal state (ex: 0-" << N << ")" << endl;
+        cin >> zeroPositionInGoalState;
+
+        vector<int> board;
+        cout << "Enter the board (ex: all numbers between 0-" << N << ")" << endl;
+        for (int i=0; i<=N; i++) {
+            int number;
+            cin >> number;
+            board.push_back(number);
+        }
+        return Board(N, board, zeroPositionInGoalState);
+    }
 
 public:
     Puzzle() {
-//        int result =
-          ida_algorithm();
-//        if (result == -1) {
-//            cout << "Success" << endl;
-//        }
-    }
-
-    Board createInitialBoard() {
-        int N = 8;
-       // vector<int> numbers {6, 5, 3, 2, 4, 8, 7, 0, 1}; //21
-        vector<int> numbers {1,3,5,4,2,6,7,8,0}; //6
-        //vector<int> numbers {1, 2,3,4,5,6,7,8,0};
-        //vector<int> numbers {1, 2, 3, 4, 5, 6, 7,8,0};
-        Board initialBoard = Board(N, numbers);
-        return initialBoard;
-//        if (initialBoard.isGoalState() == true) {
-//            cout << "true";
-//        }
-
-    }
-
-    void ida_algorithm() {
+        // Board initialBoard = createInitialBoardFromUser();
         Board initialBoard = createInitialBoard();
-        int threshold = initialBoard.getManhattan();
+        ida_algorithm(initialBoard);
+    }
 
-        while(1) {
-            cout << "Threshold: " << threshold << endl;
-            int r = 0; // TODO rename
-            int result = search(initialBoard, 0, threshold, r);
-            if (result == -1) {
-                cout << "Success: " << r << endl;
+    void ida_algorithm(const Board& initialBoard) {
+        int threshold = initialBoard.getHeuristic();
+
+        while(true) {
+            int lengthOfOptimalPath = 0; // TODO rename
+            int g = 0; // Number of nodes traversed from a start node to get to the current node
+            int result = search(initialBoard, g, threshold, lengthOfOptimalPath);
+            if (result == SUCCESS) {
+                cout << "Length of Optimal Path: " << lengthOfOptimalPath << endl;
                 break;
             }
             threshold = result;
         }
     }
 
-    int search(Board board, int g, int threshold, int& r) {
-        int f = g + board.getManhattan();
-       // cout << "g: " << g << endl;
-        cout << "h: " << board.getManhattan() << " f: " << f << " g: " << g << endl;
-        cout << board.showBoard() << endl;
+    // Returns:
+    // SUCCESS,                        when an optimal path to the goal is found
+    // min{f1,f2,..} = next-threshold, where fi: fi > current-threshold;
+    int search(Board board, int g, int threshold, int& lengthOfOptimalPath) {
+        int f = g + board.getHeuristic();
+        // cout << board.showBoard() << endl;
 
         if (board.isGoalState()) {
-            r = g;
+            lengthOfOptimalPath = g;
             return -1;
         }
 
@@ -216,53 +206,20 @@ public:
         int min = INT_MAX;
         vector<Board> neighbours = board.getNeighbours();
 
-        for (int i = 0; i < neighbours.size(); i++) {
-            int result = search(neighbours[i], g+1, threshold, r);
-            if (result == -1) {
-                // cout << neighbours[i].showBoard() << endl;
-                return -1;
+        for (auto & neighbour : neighbours) {
+            int result = search(neighbour, g+1, threshold, lengthOfOptimalPath);
+            if (result == SUCCESS) {
+                return SUCCESS;
             }
             if (result < min) {
                 min = result;
             }
         }
-        g-=1;
+
         return min;
     }
-
-
-    void init() {
-        int N;
-        cout << "Enter count of tiles (ex: 8, 15): " << endl;
-        cin >> N;
-        // TODO
-//        int positionOfZero;
-//        cout << "Enter position of zero (ex: 0-" << N << ")" << endl;
-//        cin >> positionOfZero;
-        vector<int> board;
-        cout << "Enter the board (ex: all numbers between 0-" << N << ")" << endl;
-        for (int i=0; i<=N; i++) {
-            int number;
-            cin >> number;
-            board.push_back(number);
-        }
-        Board initialBoard = Board(N, board);
-        //goalState = findGoalState(N);
-    }
-
 };
 
 int main() {
-//    vector<int> numbers {1, 3, 8, 7, 5, 2, 4, 0, 6};
-//    Board my_board = Board(8, numbers);
-//    cout << my_board.showBoard();
-//    vector<Board> ng = my_board.getNeighbours();
-////    for (int i=0; i< ng.size(); i++ ){
-////        cout << ng[i].showBoard();
-////        cout << '\n';
-////    }
     Puzzle puz = Puzzle();
-
-    //cout << isGoal;
-
 }
