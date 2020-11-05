@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 #include <cmath>
+#include <chrono>
 
 using std::cin;
 using std::cout;
@@ -9,6 +10,7 @@ using std::vector;
 using std::string;
 using std::to_string;
 using std::swap;
+using namespace std::chrono;
 
 const int SUCCESS = -1;
 
@@ -65,7 +67,7 @@ private:
     }
 
 public:
-    Board(int lastNumber, vector<int> numbersInBoard, int zeroPositionInGoalState = 8, string parentMove = "init") {
+    Board(int lastNumber, vector<int> numbersInBoard, int zeroPositionInGoalState = -1, string parentMove = "init") {
         n = (int) sqrt(lastNumber + 1);
 
         board = std::move(numbersInBoard);
@@ -103,20 +105,20 @@ public:
             return inversions + (zeroPosition / n) % 2 != 0;
     };
 
-    int getHeuristic() const {
+    [[nodiscard]] int getHeuristic() const {
         return heuristic;
     }
 
-    string getParentMove() const {
+    [[nodiscard]] string getParentMove() const {
         return parentMove;
+    }
+
+    [[nodiscard]] bool isGoalState() const {
+        return heuristic == 0;
     }
 
     bool operator < (Board& otherBoard) const {
         return heuristic < otherBoard.getHeuristic();
-    }
-
-    bool isGoalState() const {
-        return heuristic == 0;
     }
 
     vector<Board> getNeighbours() {
@@ -132,7 +134,7 @@ public:
         }
 
         // right
-        if (zeroPosition % n != 2 and parentMove != "left"){
+        if (zeroPosition % n != (n - 1) and parentMove != "left"){
             vector<int> neighbourBoard = board;
             swap(neighbourBoard[zeroPosition], neighbourBoard[zeroPosition + 1]);
             string move = "right";
@@ -150,7 +152,7 @@ public:
         }
 
         // down
-        if (zeroPosition / n != 2 and parentMove != "up"){
+        if (zeroPosition / n != (n - 1) and parentMove != "up"){
             vector<int> neighbourBoard = board;
             swap(neighbourBoard[zeroPosition], neighbourBoard[zeroPosition + n]);
             string move = "down";
@@ -166,22 +168,42 @@ public:
 class Puzzle{
 private:
     static Board createInitialBoard() {
-        int N = 8;
-        // 6: up, up, left, down, right, down
-        //vector<int> numbers {1, 3, 5, 4, 2, 6, 7, 8, 0};
+        int N;
+        vector<int> numbers;
 
-        // 21:   right, up, up, left, left, down, right, up, right, down,
-        // left, down, left, up,  right, up, left, down, down, right, right
-         vector<int> numbers {6, 5, 3, 2, 4, 8, 7, 0, 1};
+        N = 8;
+        numbers = {6, 5, 3,
+                   2, 4, 8,
+                   7, 0, 1};
+        // 21:   right, up, up, left, left, down, right, up, right, down, left
+        //       down, left, up,  right, up, left, down, down, right, right
+         Board initialBoard = Board(N, numbers);
 
-        Board initialBoard = Board(N, numbers, N);
+        // 21: right, up, up, left, down, left, up, right, down, right, up
+        //     left,  down, down, left,  up, up, right, down, left, up
+        //Board initialBoard = Board(N, numbers, 0);
 
-        // 21: right, up, up, left, down, left, up, right, down, right,
-        // up, left,  down, down, left,  up, up, right, down, left, up
-        //vector<int> numbers {6, 5, 3, 2, 4, 8, 7, 0, 1};
-        // Board initialBoard = Board(N, numbers, 0);
+//        N = 15;
+//        numbers = {1,2,3,4,
+//                   5,6,7,10,
+//                   11,8,9,12,
+//                   13,0,14,15};
+//        // 26: right, up, left, left, down, right, right, right, up, left, left, up, right,
+        //     right, down, left, up, left, down, down, left, up, right, right, right, down
 
+//        numbers = {3,6,11,4,
+//                   2,14,12,7,
+//                   5,9,15,10,
+//                   13,1,8,0};
+//        // 36: ..
 
+//        numbers = {8,7,6,3,
+//                   2,15,12,13,
+//                   1,14,5,11,
+//                   9,4,10,0};
+//        // 48: ..
+
+//        Board initialBoard = Board(N, numbers);
         return initialBoard;
     }
 
@@ -219,7 +241,7 @@ public:
         int threshold = initialBoard.getHeuristic();
 
         while(true) {
-            //cout << "Here: " << threshold << std::endl;
+            //cout << "Threshold: " << threshold << std::endl;
             int lengthOfOptimalPath = 0;
             int g = 0; // Number of nodes traversed from a start node to get to the current node
             vector<string> path;
@@ -276,6 +298,11 @@ public:
     }
 };
 
+
 int main() {
+    auto start = high_resolution_clock::now();
     Puzzle puz = Puzzle();
+    auto stop = high_resolution_clock::now();
+    auto duration = duration_cast<microseconds>(stop - start);
+    cout << "Time taken by function: " << duration.count() / 1000 << "milliseconds" << "\n";
 }
