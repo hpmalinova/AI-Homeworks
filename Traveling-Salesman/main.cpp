@@ -4,7 +4,6 @@
 #include <vector>
 #include <algorithm>    /* std::shuffle */
 #include <cmath>       /* sqrt */
-#include <string>
 
 using std::cout;
 using std::vector;
@@ -167,7 +166,7 @@ private:
             return 0;
     }
 
-    static void completeNonFixedPartOfChild(Path& child, Path parent, int end) {
+    static void completeNonFixedPartOfChild(Path &child, Path parent, int end) {
         City parentCity;
 
         int ch = getNext(end);
@@ -206,8 +205,6 @@ public:
     }
 
     vector<Path> getPopulation() const { return population; }
-
-    int getPopulationCount() const { return populationCount; }
 
     int getPopulationSize() const { return size; }
 
@@ -248,7 +245,7 @@ public:
                 child1.setCityAt(a, parents[i].getCityAt(a));
                 child2.setCityAt(a, parents[i + 1].getCityAt(a));
             }
-            completeNonFixedPartOfChild(child1, parents[i+1], end);
+            completeNonFixedPartOfChild(child1, parents[i + 1], end);
             completeNonFixedPartOfChild(child2, parents[i], end);
 
             children.push_back(child1);
@@ -287,13 +284,14 @@ public:
     void eraseTheWorstIndividuals() {
         int eraseNumber = size - populationCount;
         population.erase(population.begin(), population.begin() + eraseNumber);
+        size -= eraseNumber;
     }
 
     friend std::ostream &operator<<(std::ostream &os, const Population &p) {
         os << "[";
         for (int i = 0; i < p.getPopulation().size(); i++) {
             os << p.getPopulation()[i];
-            if (i != p.getPopulationSize()- 1) {
+            if (i != p.getPopulationSize() - 1) {
                 os << ", \n";
             }
         }
@@ -309,14 +307,14 @@ private:
     int populationCount;
     double probabilityForMutation;
     double parentPercent;
+    int breakNumber;
 
 public:
     explicit TravelingSalesman(int citiesCount = 50, double parentPercent = 0.31,
-                               double probabilityForMutation = 0.10) {
+                               double probabilityForMutation = 0.1, int breakNumber = 50) : parentPercent(
+            parentPercent), probabilityForMutation(probabilityForMutation), breakNumber(breakNumber) {
         Cities::generateCities(citiesCount);
         populationCount = citiesCount * 5;
-        this->parentPercent = parentPercent;
-        this->probabilityForMutation = probabilityForMutation;
     }
 
     Population buildNextGenerationFrom(const Population &children, const Population &population) const {
@@ -330,14 +328,18 @@ public:
         return newPopulation;
     }
 
-    void findShortestPath() const {
+    void findShortestPath() {
         int generations = 0;
         // Initialize Population: (+ evaluation and sorting)
-        cout << "Generation: " << generations << "\n";
         Population population = Population(populationCount);
-        cout << "Best cost: " << population.getBestIndividual().getCost() << "\n";
+        cout << "\n\nGeneration: " << generations << ", ";
+        cout << "Best cost: " << population.getBestIndividual().getCost() << "\n\n";
 
-        while (generations++ <= 5000) { // TODO
+        int seq = 0;
+        double minCost = population.getBestIndividual().getCost();
+
+        while (true) {
+            generations++;
             int parentsCount = (int) (parentPercent * populationCount);
             Population parents = population.selectParents(parentsCount);
 
@@ -347,11 +349,34 @@ public:
             children.evaluate();
 
             population = buildNextGenerationFrom(children, population);
-            if (generations % 100 == 0) {
-                cout << "Generation: " << generations << "\n";
-                cout << "Best cost: " << population.getBestIndividual().getCost() << "\n";
+
+            ///////////////////////////////////////////////////////////
+
+            double cost = population.getBestIndividual().getCost();
+
+            if (cost == minCost)
+                seq++;
+            else {
+                seq = 0;
+                minCost = cost;
+            }
+
+            if (seq != 0 and seq % breakNumber == 0 and probabilityForMutation < 0.3) {
+//                cout << "\n** More mutation in generation: " << generations << " **\n\n";
+                seq = 0;
+                probabilityForMutation += 0.05;
+            }
+
+            if (seq > breakNumber)
+                break;
+
+            if (generations % 200 == 0) {
+                cout << "Generation: " << generations << ", ";
+                cout << "Best cost: " << cost << "\n";
             }
         }
+        cout << "\nFinal generation: " << generations << ", ";
+        cout << "Best cost: " << population.getBestIndividual().getCost() << "\n";
     }
 };
 
