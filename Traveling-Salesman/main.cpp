@@ -1,14 +1,14 @@
 #include <iostream>
 #include <cstdlib>     /* srand, rand */
 #include <ctime>       /* time */
+#include <utility>
 #include <vector>
-#include <algorithm>    // std::shuffle
+#include <algorithm>    /* std::shuffle */
 #include <cmath>       /* sqrt */
 #include <string>
 
 using std::cout;
 using std::vector;
-using std::string;
 
 // Gene:
 class City {
@@ -22,7 +22,7 @@ private:
     }
 
 public:
-    explicit City(int start = -1000, int end = 1000, const string &s = "Generate") {
+    explicit City(int start = 0, int end = 999, const std::string &s = "Generate") {
         if (s == "Generate") {
             generateCoordinates(start, end);
         } else {
@@ -31,13 +31,9 @@ public:
         }
     }
 
-    int getX() const {
-        return x;
-    }
+    int getX() const { return x; }
 
-    int getY() const {
-        return y;
-    }
+    int getY() const { return y; }
 
     bool operator==(const City &other) const {
         return x == other.getX() and y == other.getY();
@@ -125,6 +121,10 @@ public:
         return false;
     }
 
+    void clear() {
+        path.clear();
+    }
+
     friend std::ostream &operator<<(std::ostream &os, const Path &p) {
         vector<City> path = p.getPath();
         os << "[";
@@ -190,7 +190,9 @@ public:
 
     Path getBestIndividual() const { return population[size - 1]; }
 
-    void sortByFitness() { std::sort(population.begin(), population.end()); }
+    void sortByFitness() {
+        std::sort(population.begin(), population.end());
+    }
 
     Population selectParents(int N) {
         vector<Path> bestParents = selectBestParents(N / 6);
@@ -200,7 +202,6 @@ public:
         bestParents.reserve(bestParents.size() + bestParents2.size() + randomParents.size());
         bestParents.insert(bestParents.end(), bestParents2.begin(), bestParents2.end());
         bestParents.insert(bestParents.end(), randomParents.begin(), randomParents.end());
-
         return Population(bestParents, populationCount);
     }
 
@@ -209,7 +210,7 @@ public:
 
         if (current < endOfVector)
             return ++current;
-        else
+        if (current == endOfVector)
             return 0;
     }
 
@@ -218,10 +219,10 @@ public:
         vector<Path> parents = parentsPopulation.getPopulation();
         int parentsSize = parents.size();
         std::random_shuffle(parents.begin(), parents.end());
-
         vector<Path> children;
 
         int citiesCount = Cities::getCitiesCount();
+
         Path child1 = Path(citiesCount);
         Path child2 = Path(citiesCount);
 
@@ -324,26 +325,25 @@ private:
     double parentPercent;
 public:
     explicit TravelingSalesman(int citiesCount = 50, double parentPercent = 0.31,
-                               double probabilityForMutation = 0.20) {
+                               double probabilityForMutation = 0.10) {
         Cities::generateCities(citiesCount);
         populationCount = citiesCount * 5;
         this->parentPercent = parentPercent;
         this->probabilityForMutation = probabilityForMutation;
     }
 
-    Population buildNextGenerationFrom(Population children, Population population) {
+    Population buildNextGenerationFrom(const Population &children, const Population &population) const {
         vector<Path> newGeneration = children.getPopulation();
         vector<Path> pop = population.getPopulation();
+        newGeneration.insert(newGeneration.end(), pop.begin(), pop.end());
 
         Population newPopulation = Population(newGeneration, populationCount);
         newPopulation.sortByFitness();
-
         newPopulation.eraseTheWorstIndividuals();
         return newPopulation;
     }
 
-    void findShortestPath() {
-
+    void findShortestPath() const {
         int generations = 0;
         // Initialize Population: (+ evaluation and sorting)
         cout << "Generation: " << generations << "\n";
