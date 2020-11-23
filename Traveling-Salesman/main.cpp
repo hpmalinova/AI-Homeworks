@@ -1,7 +1,6 @@
 #include <iostream>
 #include <cstdlib>     /* srand, rand */
 #include <ctime>       /* time */
-#include <utility>
 #include <vector>
 #include <algorithm>    /* std::shuffle */
 #include <cmath>       /* sqrt */
@@ -121,10 +120,6 @@ public:
         return false;
     }
 
-    void clear() {
-        path.clear();
-    }
-
     friend std::ostream &operator<<(std::ostream &os, const Path &p) {
         vector<City> path = p.getPath();
         os << "[";
@@ -163,11 +158,35 @@ private:
         return vector<Path>(paths.begin(), paths.begin() + N);
     }
 
-public:
-    vector<Path> selectBestParents(int N) {
-        return vector<Path>(population.end() - N, population.end());
+    static int getNext(int current) {
+        int endOfVector = Cities::getCitiesCount() - 1;
+
+        if (current < endOfVector)
+            return ++current;
+        else
+            return 0;
     }
 
+    static void completeNonFixedPartOfChild(Path& child, Path parent, int end) {
+        City parentCity;
+
+        int ch = getNext(end);
+        int p = getNext(end);
+
+        while (child.hasCity(City(-1, -1, "Default-value"))) {
+            parentCity = parent.getCityAt(p);
+            if (!child.hasCity(parentCity)) {
+                child.setCityAt(ch, parentCity);
+                ch = getNext(ch);
+                p = getNext(p);
+            } else {
+                p = getNext(p);
+            }
+        }
+    }
+
+
+public:
     explicit Population(int populationCount) : population(populationCount), populationCount(populationCount) {
         generatePopulation();
         size = population.size();
@@ -180,6 +199,10 @@ public:
         size = population.size();
         evaluate();
         sortByFitness();
+    }
+
+    vector<Path> selectBestParents(int N) {
+        return vector<Path>(population.end() - N, population.end());
     }
 
     vector<Path> getPopulation() const { return population; }
@@ -205,15 +228,6 @@ public:
         return Population(bestParents, populationCount);
     }
 
-    static int getNext(int current) {
-        int endOfVector = Cities::getCitiesCount() - 1;
-
-        if (current < endOfVector)
-            return ++current;
-        if (current == endOfVector)
-            return 0;
-    }
-
     // Two-point
     Population crossover(const Population &parentsPopulation) const {
         vector<Path> parents = parentsPopulation.getPopulation();
@@ -234,36 +248,8 @@ public:
                 child1.setCityAt(a, parents[i].getCityAt(a));
                 child2.setCityAt(a, parents[i + 1].getCityAt(a));
             }
-
-            City parentCity;
-
-            // Child 1:
-            int ch1 = getNext(end);
-            int p2 = getNext(end);
-            while (child1.hasCity(City(-1, -1, "Default-value"))) {
-                parentCity = parents[i + 1].getCityAt(p2);
-                if (!child1.hasCity(parentCity)) {
-                    child1.setCityAt(ch1, parentCity);
-                    ch1 = getNext(ch1);
-                    p2 = getNext(p2);
-                } else {
-                    p2 = getNext(p2);
-                }
-            }
-
-            // Child 2:
-            int ch2 = getNext(end);
-            int p1 = getNext(end);
-            while (child2.hasCity(City(-1, -1, "Default-value"))) {
-                parentCity = parents[i].getCityAt(p1);
-                if (!child2.hasCity(parentCity)) {
-                    child2.setCityAt(ch2, parentCity);
-                    ch2 = getNext(ch2);
-                    p1 = getNext(p1);
-                } else {
-                    p1 = getNext(p1);
-                }
-            }
+            completeNonFixedPartOfChild(child1, parents[i+1], end);
+            completeNonFixedPartOfChild(child2, parents[i], end);
 
             children.push_back(child1);
             children.push_back(child2);
@@ -299,7 +285,7 @@ public:
     }
 
     void eraseTheWorstIndividuals() {
-        int eraseNumber = population.size() - populationCount;
+        int eraseNumber = size - populationCount;
         population.erase(population.begin(), population.begin() + eraseNumber);
     }
 
@@ -307,7 +293,7 @@ public:
         os << "[";
         for (int i = 0; i < p.getPopulation().size(); i++) {
             os << p.getPopulation()[i];
-            if (i != p.getPopulation().size() - 1) {
+            if (i != p.getPopulationSize()- 1) {
                 os << ", \n";
             }
         }
@@ -323,6 +309,7 @@ private:
     int populationCount;
     double probabilityForMutation;
     double parentPercent;
+
 public:
     explicit TravelingSalesman(int citiesCount = 50, double parentPercent = 0.31,
                                double probabilityForMutation = 0.10) {
@@ -350,7 +337,7 @@ public:
         Population population = Population(populationCount);
         cout << "Best cost: " << population.getBestIndividual().getCost() << "\n";
 
-        while (generations++ <= 1000) { // TODO
+        while (generations++ <= 5000) { // TODO
             int parentsCount = (int) (parentPercent * populationCount);
             Population parents = population.selectParents(parentsCount);
 
