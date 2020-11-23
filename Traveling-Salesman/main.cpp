@@ -1,7 +1,6 @@
 #include <iostream>
 #include <cstdlib>     /* srand, rand */
 #include <ctime>       /* time */
-#include <utility>
 #include <vector>
 #include <algorithm>    // std::shuffle
 #include <cmath>       /* sqrt */
@@ -23,7 +22,7 @@ private:
     }
 
 public:
-    explicit City(int start = 0, int end = 999, const string &s = "Generate") {
+    explicit City(int start = -1000, int end = 1000, const string &s = "Generate") {
         if (s == "Generate") {
             generateCoordinates(start, end);
         } else {
@@ -106,26 +105,17 @@ public:
         evaluatePathCost();
     }
 
-    explicit Path(int parentSize) : path(parentSize, City(-1, -1, "Default-value")), cost(0.0) {
-    }
+    explicit Path(int parentSize) : path(parentSize, City(-1, -1, "Default-value")), cost(0.0) {}
 
-    explicit Path(vector<City> nodes): path(std::move(nodes)), cost(0.0) {}
+    explicit Path(vector<City> nodes) : path(std::move(nodes)), cost(0.0) {}
 
-    vector<City> getPath() const {
-        return path;
-    }
+    vector<City> getPath() const { return path; }
 
-    double getCost() const {
-        return cost;
-    }
+    double getCost() const { return cost; }
 
-    City getCityAt(int i) {
-        return path[i];
-    }
+    City getCityAt(int i) { return path[i]; }
 
-    void setCityAt(int i, City value) {
-        path[i] = value;
-    }
+    void setCityAt(int i, City value) { path[i] = value; }
 
     bool hasCity(City c) {
         for (auto &city: path) {
@@ -133,10 +123,6 @@ public:
                 return true;
         }
         return false;
-    }
-
-    void clear() {
-        path.clear();
     }
 
     friend std::ostream &operator<<(std::ostream &os, const Path &p) {
@@ -189,54 +175,32 @@ public:
         sortByFitness();
     }
 
-    explicit Population(vector<Path> paths, int populationCount) : populationCount(populationCount){
+    explicit Population(vector<Path> paths, int populationCount) : populationCount(populationCount) {
         population = std::move(paths);
         size = population.size();
         evaluate();
         sortByFitness();
     }
 
-    vector<Path> getPopulation() const {
-        return population;
-    }
+    vector<Path> getPopulation() const { return population; }
 
-    int getPopulationCount() const {
-        return populationCount;
-    }
+    int getPopulationCount() const { return populationCount; }
 
-    int getPopulationSize() const{
-        return size;
-    }
+    int getPopulationSize() const { return size; }
 
-    Path getBestIndividual() const {
-        return population[size - 1];
-    }
+    Path getBestIndividual() const { return population[size - 1]; }
 
-    void sortByFitness() {
-        std::sort(population.begin(), population.end());
-    }
+    void sortByFitness() { std::sort(population.begin(), population.end()); }
 
     Population selectParents(int N) {
         vector<Path> bestParents = selectBestParents(N / 6);
-//        for (auto & bp:bestParents) {
-//            cout << "\n\nbest parents1" << bp << "\n";
-//        }
         vector<Path> bestParents2 = selectBestParents(N / 2);
-//        for (auto & bp:bestParents2) {
-//            cout << "\n\nbest parents2" << bp << "\n";
-//        }
         vector<Path> randomParents = selectRandomParents(N / 3);
-//        for (auto & bp:randomParents) {
-//            cout << "\n\nrandom" << bp << "\n";
-//        }
 
         bestParents.reserve(bestParents.size() + bestParents2.size() + randomParents.size());
         bestParents.insert(bestParents.end(), bestParents2.begin(), bestParents2.end());
         bestParents.insert(bestParents.end(), randomParents.begin(), randomParents.end());
-//        cout << "\nBEST PARENTS IN FUNC" << "\n";
-//        for (auto & bp:bestParents) {
-//            cout  << bp << "\n";
-//        }
+
         return Population(bestParents, populationCount);
     }
 
@@ -245,29 +209,24 @@ public:
 
         if (current < endOfVector)
             return ++current;
-        if (current == endOfVector)
+        else
             return 0;
     }
 
     // Two-point
-    Population crossover(Population parentsPopulation) {
+    Population crossover(const Population &parentsPopulation) const {
         vector<Path> parents = parentsPopulation.getPopulation();
         int parentsSize = parents.size();
-//        cout << "\n Parents Size: " << parentsSize << "\n";
         std::random_shuffle(parents.begin(), parents.end());
-//        for (auto &p : parents) {
-//            cout << p << "\n";
-//        }
+
         vector<Path> children;
 
         int citiesCount = Cities::getCitiesCount();
-
         Path child1 = Path(citiesCount);
         Path child2 = Path(citiesCount);
 
         int start = (int) (citiesCount * 0.3);
         int end = (int) (citiesCount * 0.7);
-//        cout << "start: " << start << ", end: " << end << "\n";
 
         for (int i = 0; i < parentsSize - 1; i++) {
             for (int a = start; a <= end; a++) {
@@ -314,15 +273,15 @@ public:
         return Population(children, populationCount);
     }
 
-    void mutate (double probabilityForMutation) {
+    void mutate(double probabilityForMutation) {
         int swaps = (int) (probabilityForMutation * size);
-        for (int s=0; s< swaps; s++) {
+        for (int s = 0; s < swaps; s++) {
             // Random child -> random i->j mutation
             int pathToSwap = rand() % size;
 
             int i = rand() % Cities::getCitiesCount();
             int j = rand() % Cities::getCitiesCount();
-            while (j==i) {
+            while (j == i) {
                 j = rand() % Cities::getCitiesCount();
             }
 
@@ -330,23 +289,17 @@ public:
             population[pathToSwap].setCityAt(i, population[pathToSwap].getCityAt(j));
             population[pathToSwap].setCityAt(j, temp);
         }
-//        iter_swap(v.begin() + position, v.begin() + next_position);
-
     }
 
     void evaluate() {
-        for (auto& path: population) {
+        for (auto &path: population) {
             path.evaluatePathCost();
         }
     }
 
     void eraseTheWorstIndividuals() {
-//        population.erase(population.begin()+populationCount, population.end());
         int eraseNumber = population.size() - populationCount;
-        population.erase(population.begin(), population.begin()+eraseNumber);
-//        for (int i=startIndex; i<populationCount; i++) {
-//
-//        }
+        population.erase(population.begin(), population.begin() + eraseNumber);
     }
 
     friend std::ostream &operator<<(std::ostream &os, const Population &p) {
@@ -370,7 +323,8 @@ private:
     double probabilityForMutation;
     double parentPercent;
 public:
-    explicit TravelingSalesman(int citiesCount = 50, double parentPercent = 0.31, double probabilityForMutation = 0.10) {
+    explicit TravelingSalesman(int citiesCount = 50, double parentPercent = 0.31,
+                               double probabilityForMutation = 0.20) {
         Cities::generateCities(citiesCount);
         populationCount = citiesCount * 5;
         this->parentPercent = parentPercent;
@@ -378,51 +332,18 @@ public:
     }
 
     Population buildNextGenerationFrom(Population children, Population population) {
-//        cout << "In new gen\n";
         vector<Path> newGeneration = children.getPopulation();
         vector<Path> pop = population.getPopulation();
-//        newGeneration.reserve(children.getPopulation().size() + population.getPopulation().size());
-//        newGeneration.insert(newGeneration.end(), children.getPopulation().begin(), children.getPopulation().end());
-
-//        newGeneration.insert(newGeneration.end(), population.getPopulation().begin(), population.getPopulation().end());
-        newGeneration.insert(newGeneration.end(), pop.begin(), pop.end());
 
         Population newPopulation = Population(newGeneration, populationCount);
-//        newPopulation.evaluate();
         newPopulation.sortByFitness();
 
         newPopulation.eraseTheWorstIndividuals();
-//        cout << "\n AfterErase: " << newPopulation.getPopulation().size() << "\n";
         return newPopulation;
     }
 
     void findShortestPath() {
-        /*
-        int generations = 0;
-        Population population = Population(populationCount);
-        population.sortByFitness();
-//        cout << population << "\n\n";
-//        cout << "Population:" << population.getBestIndividual()  << " count:" << population.getPopulationCount() << " size:" << population.getPopulationSize();
 
-        int parentsCount = (int) (parentPercent * populationCount);
-        Population parents = population.selectParents(parentsCount);
-
-//        cout << "\nPOPULATION" << population << "\n\n";
-//        cout << parents << "\n";
-//        cout << "\nParents:" << parents.getBestIndividual()  << " count:" << parents.getPopulationCount() << " size:" << parents.getPopulationSize();
-
-        Population children = population.crossover(parents);
-        children.mutate(probabilityForMutation);
-//        children.evaluate();
-//        cout << "\nchildren: " << children << "\n" << children.getPopulationSize()<<"\n";
-//        cout << "\n\nBest child:" << children.getBestIndividual().getCost();
-
-        Population newPopulation = buildNextGenerationFrom(children, population);
-//        cout << "New BEST INDIVIDUAL:" << newPopulation.getBestIndividual().getCost();
-//
-//        cout << "\n\nNEW: " << newPopulation << "\n" << "Size: " << newPopulation.getPopulation().size();
-//        cout << "\nBest path: " << newPopulation.getBestIndividual();
-    */
         int generations = 0;
         // Initialize Population: (+ evaluation and sorting)
         cout << "Generation: " << generations << "\n";
@@ -430,41 +351,26 @@ public:
         cout << "Best cost: " << population.getBestIndividual().getCost() << "\n";
 
         while (generations++ <= 1000) { // TODO
-
-            // Pp: population.selectParents
             int parentsCount = (int) (parentPercent * populationCount);
             Population parents = population.selectParents(parentsCount);
 
-            // Pc: crossover(Pp)
             Population children = population.crossover(parents);
 
-            // mutate(Pc)
             children.mutate(probabilityForMutation);
             children.evaluate();
 
-            // newPopulation = nextGeneration(Pc, population)
-//            Population newPopulation = buildNextGenerationFrom(children, population);
             population = buildNextGenerationFrom(children, population);
             if (generations % 100 == 0) {
                 cout << "Generation: " << generations << "\n";
                 cout << "Best cost: " << population.getBestIndividual().getCost() << "\n";
             }
-
-
         }
     }
-
 };
-
-// В1: Ако при последните (10) генерации нямаме подобрение на най-добрия индивид, да спрем
-// В2: Да му кажем точно колко генерации да направи
-// Мутация на 5% // или при схождане - по-голям процент на мутация
-// Популацията винаги е с една съща дължина - ако добавяме N нови деца, премахваме N-те най-слаби от предната итерация
 
 int main() {
     srand(time(nullptr));
     TravelingSalesman ts = TravelingSalesman(100);
     ts.findShortestPath();
     return 0;
-
 }
