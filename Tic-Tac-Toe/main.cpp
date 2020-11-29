@@ -1,9 +1,8 @@
 #include <iostream>
-#include <utility>
 #include <vector>
-#include <ctime>       /* time */
+#include <ctime>        /* time */
 #include <algorithm>    /* std::shuffle */
-#include <cstdlib>     /* srand, rand */
+#include <cstdlib>      /* srand, rand */
 
 using std::vector;
 using std::string;
@@ -25,7 +24,7 @@ struct Result {
 
     Result(int value, short position) : value(value), position(position) {}
 
-    bool shouldContinue() const {
+    [[nodiscard]] bool shouldContinue() const {
         return value == -1 and position == -1;
     }
 };
@@ -34,10 +33,6 @@ class Board {
 private:
     vector<vector<char>> board;
     short positionChanged;
-
-    bool isValid(short position) {
-        return !(position > N * N - 1 or position < 0 or getAt(position) != EMPTY_SPACE);
-    }
 
     bool isFull() {
         for (int i = 0; i < N; i++) {
@@ -57,28 +52,24 @@ public:
         setAt(position, value);
     }
 
-    bool isValid(short x, short y) {
-        if (x < 0 or x >= N or y < 0 or y >= N or board[x][y] != EMPTY_SPACE)
-            return false;
-        return true;
+    bool isValid(short position) {
+        return !(position > N * N - 1 or position < 0 or getAt(position) != EMPTY_SPACE);
     }
 
     vector<vector<char>> getBoard() { return board; }
 
-    bool setAt(short position, char value) {
+    void setAt(short position, char value) {
         if (isValid(position)) {
             board[position / N][position % N] = value;
             positionChanged = position;
-            return true;
         }
-        return false;
     }
 
     char getAt(int position) {
         return board[position / N][position % N];
     }
 
-    short getPosition() const { return positionChanged; }
+    [[nodiscard]] short getPosition() const { return positionChanged; }
 
     void printBoard() {
         for (int i = 0; i < N; i++) {
@@ -132,16 +123,16 @@ public:
 
     vector<Board> getSuccessors() {
         vector<Board> successors;
+
         for (auto &position : CHILDREN_ORDER) {
             if (getAt(position) == EMPTY_SPACE) {
                 char value;
-
                 if (positionChanged == -1)
                     value = PLAYER1;
                 else
                     value = (getAt(positionChanged) == PLAYER1) ? PLAYER2 : PLAYER1;
 
-                successors.push_back(Board(*this, position, value));
+                successors.emplace_back(*this, position, value);
             }
         }
         return successors;
@@ -182,7 +173,7 @@ private:
             std::cin >> x >> y;
             cout << "\n";
             position = x * N + y;
-            if (currentBoard.isValid(x, y)) {
+            if (currentBoard.isValid(position)) {
                 currentBoard.setAt(position, playerTurn);
                 break;
             } else {
@@ -199,9 +190,9 @@ private:
             return Result(0, position);
         }
         if (winner == PLAYER2) {
-            return Result(depth - (N * N + 1), position); // todo change
+            return Result(depth - (N * N + 1), position);
         }
-        return Result(-1, -1); // CONTINUE
+        return Result(-1, -1); // There is no winner
     }
 
     Result max(Board myBoard, int alpha, int beta, int depth) {
@@ -213,13 +204,12 @@ private:
         int maxValue = INT_MIN; // - Infinity
         short position;
 
-        vector<Board> successors = myBoard.getSuccessors();
-        for (auto &child: successors) {
-            Result r = min(child, alpha, beta, depth + 1); // todo fix
+        for (auto &child: myBoard.getSuccessors()) {
+            Result r = min(child, alpha, beta, depth + 1);
 
             if (r.value > maxValue) {
                 maxValue = r.value;
-                position = child.getPosition(); // todo ванка r.position
+                position = child.getPosition();
             }
 
             alpha = std::max(alpha, maxValue);
@@ -240,12 +230,13 @@ private:
         short position;
 
         for (auto &child: myBoard.getSuccessors()) {
-            Result r = max(child, alpha, beta, depth + 1); // todo fix
+            Result r = max(child, alpha, beta, depth + 1);
 
             if (r.value < minValue) {
                 minValue = r.value;
-                position = child.getPosition();// todo ванка r.position
+                position = child.getPosition();
             }
+
             beta = std::min(beta, minValue);
             if (alpha > beta) {
                 break;
@@ -255,7 +246,7 @@ private:
     }
 
 public:
-    explicit Game(bool firstAI = false) {
+    explicit Game(bool firstAI = true) {
         if (firstAI) {
             AI = PLAYER1;
             Player = PLAYER2;
@@ -271,36 +262,30 @@ public:
     void playMinimaxWithAlphaBetaPruning() {
         char winner = currentBoard.isTerminal();
         int depth = 0;
+        cout << "\n";
         currentBoard.printBoard();
+        cout << "\n";
 
         while (winner == CONTINUE_THE_GAME) {
-            cout << "\n";
-
             if (playerTurn == Player) {
                 humanPlay();
                 playerTurn = AI;
             } else { // AI
-                // Start the Corner Strategy if AI plays first
                 if (depth == 0) {
                     currentBoard.setFirstInRandomCorner(AI);
                 } else if (AI == PLAYER1) {
                     Result r = max(currentBoard, INT_MIN, INT_MAX, depth);
-                    bool res = currentBoard.setAt(r.position, AI);
-                    if (!res) {
-                        cout << "Not a successful set\n";
-                    }
+                    currentBoard.setAt(r.position, AI);
                 } else if (AI == PLAYER2) {
                     Result r = min(currentBoard, INT_MIN, INT_MAX, depth);
-                    bool res = currentBoard.setAt(r.position, AI);
-                    if (!res) {
-                        cout << "Not a successful set\n";
-                    }
+                    currentBoard.setAt(r.position, AI);
                 }
                 playerTurn = Player;
             }
             winner = currentBoard.isTerminal();
             depth++;
             currentBoard.printBoard();
+            cout << "\n";
         }
         printWinner(winner);
     }
