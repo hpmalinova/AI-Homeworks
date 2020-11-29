@@ -5,7 +5,6 @@
 #include <cstdlib>      /* srand, rand */
 
 using std::vector;
-using std::string;
 using std::cout;
 
 const short N = 3;
@@ -100,11 +99,6 @@ public:
                 return first;
             }
         }
-
-//            if (board[row] == vector<char>{PLAYER1, PLAYER1, PLAYER1})
-//                return PLAYER1;
-//            else if (board[row] == vector<char>{PLAYER2, PLAYER2, PLAYER2})
-//                return PLAYER2;
 
         // Main Diagonal
         first = board[0][0];
@@ -207,6 +201,9 @@ private:
         return Result(-1, -1); // There is no winner
     }
 
+    // Alpha–beta pruning is a search algorithm that seeks to decrease the number
+    // of nodes that are evaluated by the minimax algorithm in its search tree.
+
     Result max(Board myBoard, int alpha, int beta, int depth) {
         Result result = evaluate(myBoard.isTerminal(), depth, myBoard.getPosition());
         if (!result.shouldContinue()) {
@@ -277,11 +274,9 @@ public:
             } else { // AI
                 if (depth == 0) {
                     currentBoard.setFirstInRandomCorner(AI);
-                } else if (AI == PLAYER1) {
-                    Result r = max(currentBoard, INT_MIN, INT_MAX, depth);
-                    currentBoard.setAt(r.position, AI);
-                } else if (AI == PLAYER2) {
-                    Result r = min(currentBoard, INT_MIN, INT_MAX, depth);
+                } else {
+                    Result r = (AI == PLAYER1) ? max(currentBoard, INT_MIN, INT_MAX, depth) : min(currentBoard, INT_MIN,
+                                                                                                  INT_MAX, depth);
                     currentBoard.setAt(r.position, AI);
                 }
                 playerTurn = Player;
