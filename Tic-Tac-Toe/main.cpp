@@ -151,25 +151,37 @@ public:
 
 class Game {
 private:
-    char playerTurn;
-    char AI;        // 'X' or 'O'
-    char Player;    // 'O' or 'X'
+    char playerTurn{};
+    char AI{};        // 'X' or 'O'
+    char Player{};    // 'O' or 'X'
     Board currentBoard;
+
+    void setFirstPlayer() {
+        cout << "Do you want to play first? (y/n)  \n";
+        char answer = '.';
+        while (answer != 'y' and answer != 'n') {
+            std::cin >> answer;
+        }
+
+        Player = (answer == 'y') ? PLAYER1 : PLAYER2;
+        AI = (answer == 'n') ? PLAYER1 : PLAYER2;
+        playerTurn = (answer == 'y') ? Player : AI;
+    }
 
     void printWinner(char winner) const {
         if (winner == AI) {
-            cout << "The winner is " << AI << "!\n";
+            cout << "You`ve lost! \n";
         } else if (winner == Player) {
-            cout << "The winner is " << Player << "!\n";
+            cout << "You`ve won! \n";
         } else if (winner == TIE) {
-            cout << "It`s a tie\n";
+            cout << "It`s a tie! \n";
         }
     }
 
     void humanPlay() {
         short x, y, position;
         while (true) {
-            cout << "Enter x,y: ";
+            cout << "Enter x, y: ";
             std::cin >> x >> y;
             cout << "\n";
             position = x * N + y;
@@ -246,16 +258,8 @@ private:
     }
 
 public:
-    explicit Game(bool firstAI = true) {
-        if (firstAI) {
-            AI = PLAYER1;
-            Player = PLAYER2;
-            playerTurn = AI;
-        } else {
-            Player = PLAYER1;
-            AI = PLAYER2;
-            playerTurn = Player;
-        }
+    explicit Game() {
+        setFirstPlayer();
         currentBoard = Board();
     }
 
