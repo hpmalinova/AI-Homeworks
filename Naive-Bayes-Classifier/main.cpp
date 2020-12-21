@@ -33,6 +33,9 @@ const std::unordered_map<short, string> sets{{1,  "../votes1.txt"},
 
 const short NUMBER_OF_ATTRIBUTES = 16;
 
+const short int INVALID = -1;
+
+
 // One for each Attribute and for each Class
 class AnswerCount {
 private:
@@ -42,9 +45,14 @@ private:
 public:
     AnswerCount() : yeaCount(0), nayCount(0) {}
 
-    void addOneYea() { yeaCount++; }
-
-    void addOneNay() { nayCount++; }
+    void addOneVote(char answer) {
+        if (answer == YEA) {
+            yeaCount++;
+        }
+        else if (answer == NAY) {
+            nayCount++;
+        }
+    }
 
     [[nodiscard]] double getProbability(char answer) const {
         if (answer == YEA) {
@@ -55,12 +63,14 @@ public:
         return -1;
     }
 
-    int getYeaCount() const {
-        return yeaCount;
-    }
-
-    int getNayCount() const {
-        return nayCount;
+    [[nodiscard]] int getVotesCount(char answer) const {
+        if (answer == YEA) {
+            return yeaCount;
+        }
+        else if (answer == NAY) {
+            return nayCount;
+        }
+        return INVALID;
     }
 
     void clearAnswers() {
@@ -82,13 +92,11 @@ public:
     }
 
     void addVote(short attribute, char answer) {
-        if (answer == YEA) {
-            cout << votes.at(attribute).getYeaCount() << "\n";
-            votes[attribute].addOneYea();
-            cout << votes.at(attribute).getYeaCount() << "\n";
-        } else if (answer == NAY) {
-            votes[attribute].addOneNay();
-        }
+        votes[attribute].addOneVote(answer);
+    }
+
+    int getVotesCount(short attribute, char answer){
+        return votes[attribute].getVotesCount(answer);
     }
 
     double getProbability(short attribute, char answer) {
@@ -101,9 +109,8 @@ public:
     }
 
     void clearVotes() {
-        for (auto& vote : votes) {
-//            cout << "VOTE: " << vote << "\n";
-            vote.
+        for (short i = 1; i<= NUMBER_OF_ATTRIBUTES;i++) {
+            votes.at(i).clearAnswers();
         }
     }
 };
@@ -150,9 +157,6 @@ public:
         double democratsProbability = (double) democratsCount / (democratsCount + republicansCount);
         double republicansProbability = (double) republicansCount / (democratsCount + republicansCount);
 
-        cout << "democrats: " << democratsProbability << "\n";
-        cout << "republicans: " << republicansProbability << "\n";
-
         short attr;
 
         int correctAnswers = 0;
@@ -177,8 +181,8 @@ public:
                     }
                 }
 
-                if ((republicansProbability > democratsProbability && line[0] == 'r') ||
-                    (democratsProbability > republicansProbability && line[0] == 'd')) {
+                if ((republicansProbability > democratsProbability && line[0] == REPUBLICAN) ||
+                    (democratsProbability > republicansProbability && line[0] == DEMOCRAT)) {
                     correctAnswers++;
                 }
                 allAnswers++;
@@ -198,10 +202,11 @@ public:
     void crossValidation() { // TODO add shuffle
         double allAccuracies = 0;
         double accuracy;
-        string validationSet;
-        vector<string> trainingSets;
 
         for (int toValidate = 1; toValidate <= NUMBER_OF_SETS; toValidate++) {
+            string validationSet;
+            vector<string> trainingSets;
+
             for (int i = 1; i <= NUMBER_OF_SETS; i++) {
                 if (i != toValidate) {
                     trainingSets.push_back(sets.at(i));
