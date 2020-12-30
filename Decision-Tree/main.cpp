@@ -9,8 +9,6 @@
 #include <cstdlib>     /* srand, rand */
 #include <ctime>       /* time */
 
-//#include "attributes.cpp"
-
 using std::string;
 using std::vector;
 using std::cout;
@@ -62,37 +60,14 @@ public:
 
     [[nodiscard]] double getEntropy() const {
         if (recurrenceCount == 0 || noRecurrenceCount == 0) {
-            return 1;
+            return 0;
         }
         double recurrenceProb = (double) recurrenceCount / (recurrenceCount + noRecurrenceCount);
         double noRecurrenceProb = (double) noRecurrenceCount / (recurrenceCount + noRecurrenceCount);
         return ((-(recurrenceProb * log2(recurrenceProb))) - (noRecurrenceProb * log2(noRecurrenceProb)));
-/*
-        if (recurrenceCount+noRecurrenceCount == 0) {
-            return 1;
-        }
-        double recurrenceProb = (double) recurrenceCount / (recurrenceCount + noRecurrenceCount);
-        double noRecurrenceProb = (double) noRecurrenceCount / (recurrenceCount + noRecurrenceCount);
-
-        double logRec = log2(recurrenceProb);
-        double logNoRec = log2(noRecurrenceProb);
-
-
-        if (std::isnan(logRec)) {
-            logRec = 0;
-        }
-        if (std::isnan(logNoRec)) {
-            logNoRec = 0;
-        }
-        return ((-(recurrenceProb * logRec)) - (noRecurrenceProb * logNoRec));*/
     }
 
     [[nodiscard]] int getCount() const { return recurrenceCount + noRecurrenceCount; }
-
-    void clearAnswers() {
-        recurrenceCount = 0;
-        noRecurrenceCount = 0;
-    }
 };
 
 // == Age, Menopause, ..
@@ -103,8 +78,8 @@ private:
     // Ex: "10-19" -> {5 Recurrence, 3 NoRecurrence}
     std::unordered_map<string, AnswerCount> data;
 public:
-    explicit Attribute(string attributeName) : attributeName(attributeName) {
-        vector<string> values = ATTRIBUTE_TO_VALUES.at(attributeName);//ATTRIBUTE_TO_VALUES[attributeName];
+    explicit Attribute(const string& attributeName) : attributeName(attributeName) {
+        vector<string> values = ATTRIBUTE_TO_VALUES.at(attributeName);
         for (auto &value : values) {
             data.insert({value, AnswerCount()});
         }
@@ -138,10 +113,6 @@ public:
         data[toAdd].add(info[0]); // Ex: info[0] == Recurrence/ NoRecurrence
     }
 
-    void clearData() { // TODO
-        data.clear();
-    }
-
     const string &getAttributeName() const {
         return attributeName;
     }
@@ -156,7 +127,6 @@ private:
     int recurrenceCount;
     int allAnswers;
     string bestAttribute;
-//    string targetClass;
 
     bool contains(const string &attribute) { // TODO RENAME
         for (auto &without : withoutAttributes) {
@@ -168,7 +138,6 @@ private:
     }
 
 public:
-    // TODO
     explicit DecisionTreeNode(vector<string> withoutAttributes = {},
                               DecisionTreeNode *parent = nullptr) : parent(parent), recurrenceCount(0), allAnswers(0),
                                                                     withoutAttributes(std::move(withoutAttributes)) {
@@ -179,11 +148,9 @@ public:
     }
 
     void processData(const vector<vector<string>> &info) {
-//        auto a = ATTRIBUTE_TO_VALUES;
         for (auto &attribute : ATTRIBUTE_TO_VALUES) {
             if (!contains(attribute.first)) {
-                attributes.push_back(Attribute(attribute.first));
-//                attributes.emplace_back(attribute.first); // TODO WHAT
+                attributes.emplace_back(attribute.first);
             }
         }
 
@@ -224,7 +191,6 @@ public:
         string attributeWithMaxGain;
         double gain;
         for (auto &attribute : attributes) {
-            double br = attribute.getEntropy();
             gain = entropyOfTarget - attribute.getEntropy();
             if (gain > maxGain) {
                 maxGain = gain;
@@ -240,8 +206,7 @@ public:
         if (recurrenceProbability == 0 or noRecurrenceProbability == 0) {
             return 0;
         } else {
-            return -recurrenceProbability * log2(recurrenceProbability) -
-                   noRecurrenceProbability * log2(noRecurrenceProbability);
+            return ((-(recurrenceProbability * log2(recurrenceProbability))) - (noRecurrenceProbability * log2(noRecurrenceProbability)));
         }
     }
 
@@ -274,7 +239,7 @@ public:
     }
 
     vector<string> getValues() {
-        return ATTRIBUTE_TO_VALUES.at(bestAttribute);   //ATTRIBUTE_TO_VALUES[bestAttribute];
+        return ATTRIBUTE_TO_VALUES.at(bestAttribute);
     }
 
     const string &getBestAttribute() const {
@@ -319,13 +284,11 @@ static vector<vector<string>> getDataInTokens(vector<string> someData) {
 class ID3 {
 private:
     string fileName;
-//    DecisionTreeNode *root;
-//    vector<vector<string>> allData; // TODO RENAME
 public:
     explicit ID3(string fileName) : fileName(std::move(fileName)) {}
 
-    void buildTree(DecisionTreeNode *currentNode, vector<vector<string>> data) {
-        currentNode->processData(data); // TODO PROBLEM
+    void buildTree(DecisionTreeNode *currentNode, const vector<vector<string>>& data) {
+        currentNode->processData(data);
 
         if (!currentNode->isLeafNode()) {
         string bestAttribute = currentNode->calculateBestAttribute();
@@ -379,7 +342,7 @@ public:
 
             vector<vector<string>> trainingDataInTokens = getDataInTokens(trainingSet);
             auto *root = new DecisionTreeNode();
-            buildTree(root, trainingDataInTokens); // TODO
+            buildTree(root, trainingDataInTokens);
             vector<vector<string>> validationDataInTokens = getDataInTokens(validationSet);
             accuracy = getAccuracyOfValidationSet(validationDataInTokens, root);
             allAccuracies += accuracy;
@@ -394,16 +357,8 @@ int main() {
     srand(time(nullptr));
 
     string fileName = "../breast-cancer.data";
-//    ID3 t = ID3(fileName);
-//    vector<string> fileLines = getFileLines(fileName);
-//    vector<vector<string>> data = getDataInTokens(fileLines);
-//    auto *root = new DecisionTreeNode();
-//    t.buildTree(root,data);
-//
     ID3 tree = ID3(fileName);
     tree.crossValidation();
 
-//    vector<string> trainingSet {"no-recurrence-events,60-69,ge40,20-24,0-2,no,1,left,left_low,no",
-//            "no-recurrence-events,40-49,premeno,50-54,0-2,no,2,left,left_low,no"};
     return 0;
 };
