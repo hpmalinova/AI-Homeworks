@@ -222,7 +222,7 @@ private:
             }
 
             alpha = std::max(alpha, maxValue);
-            if (alpha > beta) {
+            if (alpha >= beta) {
                 break;
             }
         }
@@ -247,7 +247,7 @@ private:
             }
 
             beta = std::min(beta, minValue);
-            if (alpha > beta) {
+            if (alpha >= beta) {
                 break;
             }
         }
