@@ -22,16 +22,16 @@ const short NUMBER_OF_SETS = 11;
 const int K = 10;
 
 const std::unordered_map<string, vector<string>> ATTRIBUTE_TO_VALUES{{"age",        {"10-19",   "20-29",    "30-39",    "40-49",     "50-59",   "60-69", "70-79", "80-89", "90-99"}},
-                                                               {"menopause",  {"lt40",    "ge40",     "premeno"}},
-                                                               {"tumorSize",  {"0-4",     "5-9",      "10-14",    "15-19",     "20-24",   "25-29", "30-34", "35-39", "40-44",
-                                                                                                                                                                              "45-49", "50-54", "55-59"}},
-                                                               {"invNodes",   {"0-2",     "3-5",      "6-8",      "9-11",      "12-14",   "15-17", "18-20", "21-23", "24-26",
-                                                                                                                                                                              "27-29", "30-32", "33-35", "36-39"}},
-                                                               {"nodeCaps",   {"yes",     "no", MISSING_VALUE}},
-                                                               {"degMalig",   {"1",       "2",        "3"}},
-                                                               {"breast",     {"left",    "right"}},
-                                                               {"breastQuad", {"left_up", "left_low", "right_up", "right_low", "central", MISSING_VALUE}},
-                                                               {"irradiat",   {"yes",     "no"}}};
+                                                                     {"menopause",  {"lt40",    "ge40",     "premeno"}},
+                                                                     {"tumorSize",  {"0-4",     "5-9",      "10-14",    "15-19",     "20-24",   "25-29", "30-34", "35-39", "40-44",
+                                                                                            "45-49", "50-54", "55-59"}},
+                                                                     {"invNodes",   {"0-2",     "3-5",      "6-8",      "9-11",      "12-14",   "15-17", "18-20", "21-23", "24-26",
+                                                                                            "27-29", "30-32", "33-35", "36-39"}},
+                                                                     {"nodeCaps",   {"yes",     "no",       MISSING_VALUE}},
+                                                                     {"degMalig",   {"1",       "2",        "3"}},
+                                                                     {"breast",     {"left",    "right"}},
+                                                                     {"breastQuad", {"left_up", "left_low", "right_up", "right_low", "central", MISSING_VALUE}},
+                                                                     {"irradiat",   {"yes",     "no"}}};
 
 std::unordered_map<string, short> ATTRIBUTE_TO_POSITION{{"age",        1},
                                                         {"menopause",  2},
@@ -78,7 +78,7 @@ private:
     // Ex: "10-19" -> {5 Recurrence, 3 NoRecurrence}
     std::unordered_map<string, AnswerCount> data;
 public:
-    explicit Attribute(const string& attributeName) : attributeName(attributeName) {
+    explicit Attribute(const string &attributeName) : attributeName(attributeName) {
         vector<string> values = ATTRIBUTE_TO_VALUES.at(attributeName);
         for (auto &value : values) {
             data.insert({value, AnswerCount()});
@@ -123,12 +123,12 @@ private:
     vector<Attribute> attributes;
     DecisionTreeNode *parent;
     std::unordered_map<string, DecisionTreeNode *> children;
-    vector<string> withoutAttributes; // TODO ??? exist
+    vector<string> withoutAttributes;
     int recurrenceCount;
     int allAnswers;
     string bestAttribute;
 
-    bool contains(const string &attribute) { // TODO RENAME
+    bool contains(const string &attribute) {
         for (auto &without : withoutAttributes) {
             if (without == attribute) {
                 return true;
@@ -178,7 +178,7 @@ public:
         vector<vector<string>> filteredInfo;
 
         for (auto &line : data) {
-            if (line[ATTRIBUTE_TO_POSITION.at(bestAttribute)]  == value) {
+            if (line[ATTRIBUTE_TO_POSITION.at(bestAttribute)] == value) {
                 filteredInfo.push_back(line);
             }
         }
@@ -206,7 +206,8 @@ public:
         if (recurrenceProbability == 0 or noRecurrenceProbability == 0) {
             return 0;
         } else {
-            return ((-(recurrenceProbability * log2(recurrenceProbability))) - (noRecurrenceProbability * log2(noRecurrenceProbability)));
+            return ((-(recurrenceProbability * log2(recurrenceProbability))) -
+                    (noRecurrenceProbability * log2(noRecurrenceProbability)));
         }
     }
 
@@ -280,20 +281,19 @@ static vector<vector<string>> getDataInTokens(vector<string> someData) {
     return dataInTokens;
 }
 
-
 class ID3 {
 private:
     string fileName;
 public:
     explicit ID3(string fileName) : fileName(std::move(fileName)) {}
 
-    void buildTree(DecisionTreeNode *currentNode, const vector<vector<string>>& data) {
+    void buildTree(DecisionTreeNode *currentNode, const vector<vector<string>> &data) {
         currentNode->processData(data);
 
         if (!currentNode->isLeafNode()) {
-        string bestAttribute = currentNode->calculateBestAttribute();
-        currentNode->setBestAttribute(bestAttribute);
-        vector<string> allValues = currentNode->getValues();
+            string bestAttribute = currentNode->calculateBestAttribute();
+            currentNode->setBestAttribute(bestAttribute);
+            vector<string> allValues = currentNode->getValues();
             for (auto &value : allValues) {
                 DecisionTreeNode *child = currentNode->createChild(value);
                 vector<vector<string>> filteredData = currentNode->filterInfo(value, data);
@@ -351,7 +351,6 @@ public:
         cout << "\nAverage accuracy: " << (double) allAccuracies / NUMBER_OF_SETS << "\n";
     }
 };
-
 
 int main() {
     srand(time(nullptr));
